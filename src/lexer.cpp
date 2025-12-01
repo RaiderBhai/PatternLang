@@ -99,6 +99,8 @@ std::vector<Token> Lexer::tokenize() {
 
     while (!isAtEnd()) {
         skipWhitespace();
+        
+        if(isAtEnd()) break;
 
         char c = advance();
 
@@ -175,6 +177,6 @@ std::vector<Token> Lexer::tokenize() {
         }
     }
 
-    tokens.push_back(makeToken(TokenType::END_OF_FILE, ""));
+    tokens.push_back(makeToken(TokenType::END_OF_FILE, "EOF"));
     return tokens;
 }

@@ -12,27 +12,24 @@ class ASTPrinter {
         for (int i = 0; i < indent; i++) std::cout << "  ";
     }
 
-    // ========= Expressions =========
-
+    // ==========================
+    // Expressions
+    // ==========================
     void printExpr(Expr* e) {
         if (!e) { tab(); std::cout << "(null expr)\n"; return; }
 
         if (auto n = dynamic_cast<NumberExpr*>(e)) {
             tab(); std::cout << "Number(" << n->value << ")\n"; return;
         }
-
         if (auto b = dynamic_cast<BoolExpr*>(e)) {
             tab(); std::cout << "Bool(" << b->value << ")\n"; return;
         }
-
         if (auto s = dynamic_cast<StringExpr*>(e)) {
             tab(); std::cout << "String(\"" << s->value << "\")\n"; return;
         }
-
         if (auto v = dynamic_cast<VarExpr*>(e)) {
             tab(); std::cout << "Var(" << v->name << ")\n"; return;
         }
-
         if (auto f = dynamic_cast<FuncCallExpr*>(e)) {
             tab(); std::cout << "FuncCall(" << f->name << ")\n";
             indent++;
@@ -40,24 +37,37 @@ class ASTPrinter {
             indent--;
             return;
         }
-
         if (auto u = dynamic_cast<UnaryExpr*>(e)) {
             tab(); std::cout << "Unary(" << u->op << ")\n";
             indent++; printExpr(u->expr.get()); indent--;
             return;
         }
-
         if (auto b2 = dynamic_cast<BinaryExpr*>(e)) {
             tab(); std::cout << "Binary(" << b2->op << ")\n";
-            indent++; printExpr(b2->left.get()); printExpr(b2->right.get()); indent--;
+            indent++;
+            printExpr(b2->left.get());
+            printExpr(b2->right.get());
+            indent--;
             return;
         }
 
         tab(); std::cout << "(unknown expr)\n";
     }
 
-    // ========= Statements =========
+    // ==========================
+    // Blocks
+    // ==========================
+    void printBlock(BlockStmt* b) {
+        tab(); std::cout << "{\n";
+        indent++;
+        for (auto &s : b->stmts) printStmt(s.get());
+        indent--;
+        tab(); std::cout << "}\n";
+    }
 
+    // ==========================
+    // Statements
+    // ==========================
     void printStmt(Stmt* s) {
         if (!s) return;
 
@@ -80,11 +90,13 @@ class ASTPrinter {
         }
 
         if (auto i = dynamic_cast<InputStmt*>(s)) {
-            tab(); std::cout << "Input(" << i->name << ")\n"; return;
+            tab(); std::cout << "Input(" << i->name << ")\n";
+            return;
         }
 
         if (dynamic_cast<NewlineStmt*>(s)) {
-            tab(); std::cout << "Newline\n"; return;
+            tab(); std::cout << "Newline\n";
+            return;
         }
 
         if (auto r = dynamic_cast<ReturnStmt*>(s)) {
@@ -95,10 +107,10 @@ class ASTPrinter {
 
         if (auto f = dynamic_cast<ForStmt*>(s)) {
             tab(); std::cout << "For(" << f->var << ")\n";
-            indent++; 
-                printExpr(f->start.get());
-                printExpr(f->end.get());
-                printBlock(f->block.get());
+            indent++;
+            printExpr(f->start.get());
+            printExpr(f->end.get());
+            printBlock(f->block.get());
             indent--;
             return;
         }
@@ -127,29 +139,22 @@ class ASTPrinter {
         }
 
         if (auto b = dynamic_cast<BlockStmt*>(s)) {
-            printBlock(b); return;
+            printBlock(b);
+            return;
         }
 
         tab(); std::cout << "(unknown stmt)\n";
     }
 
-    // ========= Block =========
-
-    void printBlock(BlockStmt* b) {
-        tab(); std::cout << "{\n";
-        indent++;
-        for (auto &s : b->stmts) printStmt(s.get());
-        indent--;
-        tab(); std::cout << "}\n";
-    }
-
-    // ========= Function =========
-
+    // ==========================
+    // Functions
+    // ==========================
     void printFunc(FuncDecl* f) {
-        tab(); 
+        tab();
         std::cout << "FuncDecl(" << f->name << ")\n";
 
         indent++;
+
         if (!f->params.empty()) {
             tab(); std::cout << "Params:\n";
             indent++;
@@ -160,24 +165,38 @@ class ASTPrinter {
         }
 
         tab(); std::cout << "Body:\n";
-        indent++; printBlock(f->body.get()); indent--;
+        indent++;
+        printBlock(f->body.get());
+        indent--;
 
         indent--;
     }
 
 public:
-
+    // ==========================
+    // Program
+    // ==========================
     void print(Program* p) {
         std::cout << "=== AST ===\n";
 
         for (auto &d : p->decls) {
+
             if (auto f = dynamic_cast<FuncDecl*>(d.get())) {
                 printFunc(f);
-            } else if (auto v = dynamic_cast<VarDeclStmt*>(d.get())) {
-                printStmt(v);
-            } else {
-                std::cout << "(Unknown declaration)\n";
+                continue;
             }
+
+            if (auto v = dynamic_cast<VarDeclStmt*>(d.get())) {
+                printStmt(v);
+                continue;
+            }
+
+            if (auto s = dynamic_cast<Stmt*>(d.get())) {
+                printStmt(s);
+                continue;
+            }
+
+            std::cout << "(Unknown declaration)\n";
         }
 
         std::cout << "=== END AST ===\n";
@@ -185,3 +204,4 @@ public:
 };
 
 #endif
+

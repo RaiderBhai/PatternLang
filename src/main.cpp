@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "ast_printer.h"
+#include "sema.h"
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -28,11 +29,18 @@ int main(int argc, char** argv) {
     Parser parser(tokens);
     Program* program = parser.parse();
 
-    std::cout << "=== Parsing Completed Successfully ===\n\n";
+    std::cout << "=== Parsing Completed Successfully ===\n";
 
-    // ===== AST PRINTING =====
+    // ===== SEMANTIC ANALYSIS =====
+    SemanticAnalyzer sema;
+    sema.analyze(program);
+
+    std::cout << "=== Semantic Analysis Completed Successfully ===\n\n";
+
+    // ===== AST PRINTING (optional) =====
     ASTPrinter printer;
     printer.print(program);
 
     return 0;
 }
+
