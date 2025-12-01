@@ -4,3 +4,4 @@ func add(int x, int y) {
 
 int z = add(5, 7);
 print z;
+newline;
