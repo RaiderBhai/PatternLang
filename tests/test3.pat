@@ -1,4 +1,6 @@
-string s = "Hello";
-array<int> arr[5];
-arr[0] = 10;
-print arr[0];
+func add(int x, int y) {
+    return x + y;
+}
+
+int z = add(5, 7);
+print z;

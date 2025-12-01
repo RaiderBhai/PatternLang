@@ -69,7 +69,6 @@ Token Lexer::identifier() {
     if (text == "print") return makeToken(TokenType::KW_PRINT, text);
     if (text == "input") return makeToken(TokenType::KW_INPUT, text);
     if (text == "newline") return makeToken(TokenType::KW_NEWLINE, text);
-    if (text == "array") return makeToken(TokenType::KW_ARRAY, text);
     if (text == "pattern") return makeToken(TokenType::KW_PATTERN, text);
     if (text == "true" || text == "false")
         return makeToken(TokenType::BOOL_LITERAL, text);
@@ -132,24 +131,47 @@ std::vector<Token> Lexer::tokenize() {
             case '*': tokens.push_back(makeToken(TokenType::MUL, "*")); break;
             case '%': tokens.push_back(makeToken(TokenType::MOD, "%")); break;
             case '/': tokens.push_back(makeToken(TokenType::DIV, "/")); break;
-            case '=': tokens.push_back(makeToken(match('=') ? TokenType::EQ : TokenType::ASSIGN, "==")); break;
-            case '!': tokens.push_back(makeToken(match('=') ? TokenType::NEQ : TokenType::NOT)); break;
-            case '<': tokens.push_back(makeToken(match('=') ? TokenType::LEQ : TokenType::LT)); break;
-            case '>': tokens.push_back(makeToken(match('=') ? TokenType::GEQ : TokenType::GT)); break;
-            case '&': if (match('&')) tokens.push_back(makeToken(TokenType::AND)); break;
-            case '|': if (match('|')) tokens.push_back(makeToken(TokenType::OR)); break;
 
-            case '(': tokens.push_back(makeToken(TokenType::LPAREN)); break;
-            case ')': tokens.push_back(makeToken(TokenType::RPAREN)); break;
-            case '{': tokens.push_back(makeToken(TokenType::LBRACE)); break;
-            case '}': tokens.push_back(makeToken(TokenType::RBRACE)); break;
-            case '[': tokens.push_back(makeToken(TokenType::LBRACKET)); break;
-            case ']': tokens.push_back(makeToken(TokenType::RBRACKET)); break;
-            case ',': tokens.push_back(makeToken(TokenType::COMMA)); break;
-            case ';': tokens.push_back(makeToken(TokenType::SEMICOLON)); break;
+            case '=':
+                if (match('=')) tokens.push_back(makeToken(TokenType::EQ, "=="));
+                else tokens.push_back(makeToken(TokenType::ASSIGN, "="));
+                break;
+
+            case '!':
+                if (match('=')) tokens.push_back(makeToken(TokenType::NEQ, "!="));
+                else tokens.push_back(makeToken(TokenType::NOT, "!"));
+                break;
+
+            case '<':
+                if (match('=')) tokens.push_back(makeToken(TokenType::LEQ, "<="));
+                else tokens.push_back(makeToken(TokenType::LT, "<"));
+                break;
+
+            case '>':
+                if (match('=')) tokens.push_back(makeToken(TokenType::GEQ, ">="));
+                else tokens.push_back(makeToken(TokenType::GT, ">"));
+                break;
+
+            case '&':
+                if (match('&')) tokens.push_back(makeToken(TokenType::AND, "&&"));
+                else tokens.push_back(makeToken(TokenType::UNKNOWN, "&"));
+                break;
+
+            case '|':
+                if (match('|')) tokens.push_back(makeToken(TokenType::OR, "||"));
+                else tokens.push_back(makeToken(TokenType::UNKNOWN, "|"));
+                break;
+
+            case '(': tokens.push_back(makeToken(TokenType::LPAREN, "(")); break;
+            case ')': tokens.push_back(makeToken(TokenType::RPAREN, ")")); break;
+            case '{': tokens.push_back(makeToken(TokenType::LBRACE, "{")); break;
+            case '}': tokens.push_back(makeToken(TokenType::RBRACE, "}")); break;
+            case ',': tokens.push_back(makeToken(TokenType::COMMA, ",")); break;
+            case ';': tokens.push_back(makeToken(TokenType::SEMICOLON, ";")); break;
 
             default:
                 tokens.push_back(makeToken(TokenType::UNKNOWN, std::string(1, c)));
+
         }
     }
 

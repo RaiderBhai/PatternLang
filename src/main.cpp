@@ -2,10 +2,12 @@
 #include <fstream>
 #include <sstream>
 #include "lexer.h"
+#include "parser.h"
+#include "ast_printer.h"
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "Usage: lexer <filename>\n";
+        std::cout << "Usage: compiler <filename>\n";
         return 1;
     }
 
@@ -18,12 +20,19 @@ int main(int argc, char** argv) {
     std::stringstream ss;
     ss << file.rdbuf();
 
+    // ===== LEXING =====
     Lexer lex(ss.str());
     auto tokens = lex.tokenize();
 
-    for (auto &t : tokens) {
-        std::cout << "Token: " << t.lexeme
-                  << "  Type: " << (int)t.type
-                  << "  Line: " << t.line << "\n";
-    }
+    // ===== PARSING =====
+    Parser parser(tokens);
+    Program* program = parser.parse();
+
+    std::cout << "=== Parsing Completed Successfully ===\n\n";
+
+    // ===== AST PRINTING =====
+    ASTPrinter printer;
+    printer.print(program);
+
+    return 0;
 }
