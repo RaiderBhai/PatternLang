@@ -4,6 +4,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "print_tokens.h"
 #include "ast_printer.h"
 #include "sema.h"
 #include "ir_generator.h"
@@ -30,6 +31,8 @@ int main(int argc, char** argv) {
     // ==========================
     Lexer lex(ss.str());
     auto tokens = lex.tokenize();
+    // PRINT TOKENS HERE
+    printTokens(tokens);
 
     // ==========================
     // 2. PARSING

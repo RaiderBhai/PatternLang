@@ -1,0 +1,4 @@
+cd src
+g++ *.cpp -o ../compiler -std=c++17
+cd ..
+./compiler tests/test1.pat

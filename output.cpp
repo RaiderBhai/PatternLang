@@ -2,27 +2,32 @@
 #include <string>
 using namespace std;
 
+int fact(int n);
+
+int fact(int n) {
+    int t4 = 0;
+    int t3 = 0;
+    int t2 = 0;
+    bool t1 = false;
+    t1 = n <= 1;
+    if (!(t1)) goto L2;
+    return 1;
+    goto L2;
+    L2:
+    t2 = n - 1;
+    t3 = fact(t2);
+    t4 = n * t3;
+    return t4;
+    return 0;
+    endfunc_fact:
+    return 0;
+}
 
 int main() {
-    int i = 0;
-    int t4 = 0;
-    bool t3 = false;
-    bool t2 = false;
-    bool t1 = false;
-    i = 0;
-L1:
-    t1 = i < 10;
-    if (!(t1)) goto L2;
-    t2 = i % 2;
-    t3 = t2 == 0;
-    if (!(t3)) goto L4;
-    cout << i;
+    int n = 0;
+    int t5 = 0;
+    t5 = fact(5);
+    cout << t5;
     cout << endl;
-    goto L4;
-L4:
-    t4 = i + 1;
-    i = t4;
-    goto L1;
-L2:
     return 0;
 }
