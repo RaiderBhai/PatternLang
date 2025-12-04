@@ -11,7 +11,7 @@ enum class TypeKind {
     TYPE_INT,
     TYPE_BOOL,
     TYPE_STRING,
-    TYPE_VOID,   // for functions returning nothing (if you allow)
+    TYPE_VOID,
     TYPE_UNKNOWN
 };
 
@@ -34,8 +34,8 @@ struct Type {
 struct Symbol {
     std::string name;
     Type type;
+
     bool isFunction = false;
-    // function signature
     std::vector<Type> paramTypes;
     Type returnType = Type(TypeKind::TYPE_UNKNOWN);
 
@@ -43,48 +43,90 @@ struct Symbol {
     Symbol(std::string n, Type t) : name(n), type(t) {}
 };
 
-// A simple scope-based symbol table
 class SymbolTable {
+private:
     std::vector<std::unordered_map<std::string, Symbol>> scopes;
-public:
-    SymbolTable() { pushScope(); } // global scope
+    int scopeCounter = 0;
 
-    void pushScope() { scopes.emplace_back(); }
-    void popScope() { if (!scopes.empty()) scopes.pop_back(); }
+public:
+    SymbolTable() { pushScope(); }
+
+    void pushScope() {
+        scopes.emplace_back();
+    }
+
+    void popScope() {
+        if (!scopes.empty())
+            scopes.pop_back();
+    }
 
     bool insert(const Symbol &s) {
-        if (scopes.empty()) pushScope();
         auto &cur = scopes.back();
-        if (cur.find(s.name) != cur.end()) return false;
+        if (cur.find(s.name) != cur.end())
+            return false;
         cur[s.name] = s;
         return true;
     }
 
-    // find in current scope only
     bool existsInCurrent(const std::string &name) {
-        if (scopes.empty()) return false;
-        auto &cur = scopes.back();
-        return cur.find(name) != cur.end();
+        return scopes.back().find(name) != scopes.back().end();
     }
 
-    // lookup through all scopes (inner -> outer)
     Symbol* lookup(const std::string &name) {
-        for (int i = (int)scopes.size() - 1; i >= 0; --i) {
+        for (int i = scopes.size() - 1; i >= 0; i--) {
             auto it = scopes[i].find(name);
-            if (it != scopes[i].end()) return &it->second;
+            if (it != scopes[i].end())
+                return &it->second;
         }
         return nullptr;
     }
 
-    // convenience for top-level (global) insertion
     bool insertGlobal(const Symbol &s) {
-        if (scopes.empty()) pushScope();
         auto &g = scopes.front();
-        if (g.find(s.name) != g.end()) return false;
+        if (g.find(s.name) != g.end())
+            return false;
         g[s.name] = s;
         return true;
+    }
+
+    // NEW: print entire symbol table
+    void print() {
+        std::cout << "\n=== SYMBOL TABLE ===\n";
+
+        int id = 0;
+        for (auto &scope : scopes) {
+            std::cout << "Scope " << id++ << ":\n";
+            std::cout << "  Name                Kind        Type        Params -> Return\n";
+            std::cout << "  ------------------------------------------------------------\n";
+
+            for (auto &p : scope) {
+                const Symbol &sym = p.second;
+
+                std::cout << "  " << sym.name;
+
+                int pad = 20 - sym.name.size();
+                if (pad < 1) pad = 1;
+                std::cout << std::string(pad, ' ');
+
+                if (sym.isFunction) {
+                    std::cout << "function    -           (";
+                    for (size_t i = 0; i < sym.paramTypes.size(); i++) {
+                        std::cout << sym.paramTypes[i].toString();
+                        if (i + 1 < sym.paramTypes.size()) std::cout << ", ";
+                    }
+                    std::cout << ") -> " << sym.returnType.toString();
+                } else {
+                    std::cout << "variable     " << sym.type.toString();
+                }
+
+                std::cout << "\n";
+            }
+
+            std::cout << "\n";
+        }
+
+        std::cout << "=== END SYMBOL TABLE ===\n\n";
     }
 };
 
 #endif
-

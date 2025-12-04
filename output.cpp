@@ -2,31 +2,45 @@
 #include <string>
 using namespace std;
 
-int fact(int n);
+int inc(int v);
+int twice(int v);
+int add(int x, int y);
 
-int fact(int n) {
+int inc(int v) {
+    int t2 = 0;
+    t2 = add(v, 1);
+    return t2;
+    return 0;
+    endfunc_inc:
+    return 0;
+}
+
+int twice(int v) {
     int t4 = 0;
     int t3 = 0;
-    int t2 = 0;
-    bool t1 = false;
-    t1 = n <= 1;
-    if (!(t1)) goto L2;
-    return 1;
-    goto L2;
-    L2:
-    t2 = n - 1;
-    t3 = fact(t2);
-    t4 = n * t3;
+    t3 = inc(v);
+    t4 = inc(t3);
     return t4;
     return 0;
-    endfunc_fact:
+    endfunc_twice:
+    return 0;
+}
+
+int add(int x, int y) {
+    int t1 = 0;
+    t1 = x + y;
+    return t1;
+    return 0;
+    endfunc_add:
     return 0;
 }
 
 int main() {
-    int n = 0;
+    int y = 0;
+    int v = 0;
+    int x = 0;
     int t5 = 0;
-    t5 = fact(5);
+    t5 = twice(5);
     cout << t5;
     cout << endl;
     return 0;

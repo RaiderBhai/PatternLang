@@ -1,3 +1,4 @@
+// sema.cpp
 #include "sema.h"
 #include <cstdlib>
 #include <functional>
@@ -35,8 +36,6 @@ void SemanticAnalyzer::analyze(Program* program) {
                 sym.paramTypes.push_back(stringToType(p.type));
             }
             // For now set return type to unknown; we will determine by checking return statements.
-            // But parser currently doesn't store return type in FuncDecl. We will assume functions return int by usage.
-            // If you want typed functions, extend grammar. For now assume functions return int (or detect from returns).
             sym.returnType = Type(TypeKind::TYPE_UNKNOWN);
             if (!symtab.insertGlobal(sym)) {
                 error("Redefinition of function '" + sym.name + "'", 0);
@@ -362,8 +361,17 @@ void analyzeFuncDecl(SemanticAnalyzer &sa, FuncDecl* f) {
         }
     }
 
-    sa.symtab.popScope();
+    // NOTE: keep function scope in the symbol table so it can be printed later.
+    // We intentionally DO NOT pop the function scope here so the function's parameters
+    // and any symbols declared at the function top-level remain visible for printing.
+    //
+    // If you prefer to keep only a snapshot rather than leaving scopes on the stack,
+    // we can implement a 'snapshot' API in SymbolTable and store the scope there
+    // (that requires a small change to symbol_table.h). For now leaving the scope
+    // makes it simple to inspect function-level symbols in the final symbol-table dump.
+
+    // sa.symtab.popScope();  // <<-- intentionally removed so function scope remains
+
     sa.inFunction = false;
     sa.currentFunctionReturnType = Type(TypeKind::TYPE_VOID);
 }
-
