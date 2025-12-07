@@ -81,6 +81,12 @@ struct PrintStmt : Stmt {
     std::unique_ptr<Expr> expr;
 };
 
+struct FuncCallStmt : Stmt {
+    std::string name;
+    std::vector<std::unique_ptr<Expr>> args;
+    FuncCallStmt(const std::string &n, int ln) : name(n) { line = ln; }
+};
+
 struct ReturnStmt : Stmt {
     std::unique_ptr<Expr> value;
 };

@@ -40,7 +40,8 @@ struct Symbol {
     Type returnType = Type(TypeKind::TYPE_UNKNOWN);
 
     Symbol() = default;
-    Symbol(std::string n, Type t) : name(n), type(t) {}
+    Symbol(std::string n, bool isFunc, std::vector<Type> params, Type retType)
+        : name(n), isFunction(isFunc), paramTypes(params), returnType(retType) {}
 };
 
 class SymbolTable {

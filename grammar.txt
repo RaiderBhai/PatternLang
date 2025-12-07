@@ -9,6 +9,7 @@ param_list   → type ID ("," type ID)*
 stmt_list    → stmt stmt_list | ε
 stmt         → var_decl ";" 
              | assign ";"
+             | func_call ";"
              | for_stmt
              | while_stmt
              | if_stmt

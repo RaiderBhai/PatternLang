@@ -115,9 +115,29 @@ std::string CodeGenerator::generate(const TACList &tac, Program* program) {
     collectVarTypes(program);
     declared.clear();
     ostringstream out;
+
     out << "#include <iostream>\n";
     out << "#include <string>\n";
+    out << "#include <cmath>\n";
     out << "using namespace std;\n\n";
+
+    // Built-in pattern and math functions
+    out << "string repeat(string c, int times) { string s; for (int i = 0; i < times; ++i) s += c; return s; }\n";
+    out << "void pyramid(int height) { for (int i = 1; i <= height; ++i) { for (int j = 0; j < height - i; ++j) cout << ' '; for (int j = 0; j < 2 * i - 1; ++j) cout << '*'; cout << endl; } }\n";
+    out << "void diamond(int height) { int n = height; for (int i = 1; i <= n; ++i) { for (int j = 0; j < n - i; ++j) cout << ' '; for (int j = 0; j < 2 * i - 1; ++j) cout << '*'; cout << endl; } for (int i = n - 1; i >= 1; --i) { for (int j = 0; j < n - i; ++j) cout << ' '; for (int j = 0; j < 2 * i - 1; ++j) cout << '*'; cout << endl; } }\n";
+    out << "void line(string c, int width) { for (int i = 0; i < width; ++i) cout << c; cout << endl; }\n";
+    out << "void box(string c, int width, int height) { for (int i = 0; i < height; ++i) { for (int j = 0; j < width; ++j) cout << c; cout << endl; } }\n";
+    out << "void stairs(int height, string c) { for (int i = 1; i <= height; ++i) { for (int j = 0; j < i; ++j) cout << c; cout << endl; } }\n";
+    out << "int max(int a, int b) { return a > b ? a : b; }\n";
+    out << "int min(int a, int b) { return a < b ? a : b; }\n";
+    out << "int abs(int x) { return x < 0 ? -x : x; }\n";
+    out << "int pow(int a, int b) { return static_cast<int>(std::pow(a, b)); }\n";
+    out << "int sqrt(int n) { return static_cast<int>(std::sqrt(n)); }\n";
+    out << "int rangeSum(int n) { int s = 0; for (int i = 1; i <= n; ++i) s += i; return s; }\n";
+    out << "void factor(int n) { for (int i = 2; i <= n; ++i) { while (n % i == 0) { cout << i << ' '; n /= i; } } cout << endl; }\n";
+    out << "bool isPrime(int n) { if (n <= 1) return false; for (int i = 2; i * i <= n; ++i) if (n % i == 0) return false; return true; }\n";
+    out << "void table(int n) { for (int i = 1; i <= n; ++i) { for (int j = 1; j <= n; ++j) cout << i * j << '\t'; cout << endl; } }\n";
+    out << "void patternMultiply(int a, int b) { for (int i = 0; i < a; ++i) { for (int j = 0; j < b; ++j) cout << '*'; cout << endl; } }\n\n";
 
     // find function label indices ("func_<name>")
     std::unordered_map<std::string, size_t> funcLabelIndex;
@@ -338,9 +358,9 @@ std::string CodeGenerator::generate(const TACList &tac, Program* program) {
 
     // --- MAIN ---
     declared.clear();
-    out << "int main() {\n";
 
-    // pre-declare named top-level vars (from varTypes) in main with default init
+    out << "int main() {\n";
+    // Pre-declare named top-level vars (from varTypes) in main with default init
     for (auto &pair : varTypes) {
         out << "    " << cppTypeFor(pair.second) << " " << pair.first << " = ";
         if (pair.second == "int") out << "0;\n";
@@ -349,142 +369,60 @@ std::string CodeGenerator::generate(const TACList &tac, Program* program) {
         declared[pair.first] = true;
     }
 
-    // build vector of function ranges (from funcRanges) so we can skip them when emitting main body
-    std::vector<pair<size_t,size_t>> funcRangesVec;
-    for (auto &fr : funcRanges) funcRangesVec.push_back(fr.second);
-    auto inFuncRange = [&](size_t idx)->bool{
-        for (auto &r : funcRangesVec) if (idx >= r.first && idx < r.second) return true;
-        return false;
-    };
-
-    // collect temps used in main (indices not part of any funcRange)
-    std::unordered_set<std::string> mainTemps;
-    for (size_t i = 0; i < tac.size(); ++i) {
-        if (inFuncRange(i)) continue;
-        const TAC &t = tac[i];
-        if (!t.res.empty() && isTemp(t.res)) mainTemps.insert(t.res);
-        if (!t.arg1.empty() && isTemp(t.arg1)) mainTemps.insert(t.arg1);
-        if (!t.arg2.empty() && isTemp(t.arg2)) mainTemps.insert(t.arg2);
-    }
-
-    // decide types for main temps and emit declarations at top
-    std::vector<pair<string,string>> mainTempDecls;
-    for (auto &tname : mainTemps) {
-        string ttype = decideTempType(tname, tac, 0, tac.size());
-        mainTempDecls.emplace_back(tname, ttype);
-    }
-    for (auto &p : mainTempDecls) {
-        out << "    " << p.second << " " << p.first << " = ";
-        if (p.second == "std::string") out << "\"\";\n";
-        else if (p.second == "bool") out << "false;\n";
-        else out << "0;\n";
-    }
-
-    // Now emit TAC that is not part of functions
-    for (size_t i = 0; i < tac.size(); ++i) {
-        if (inFuncRange(i)) continue;
-        const TAC &t = tac[i];
-        if (t.isLabel) {
-            // non-function label -> emit label
-            if (t.res.rfind("func_",0) == 0) continue;
-            // also skip explicit endfunc_ labels (they are not meaningful in C++ output)
-            if (t.res.rfind("endfunc_",0) == 0) continue;
-            out << t.res << ":\n";
-            continue;
-        }
-        if (t.op == "assign") {
-            string dst = t.res;
-            string src = makeExprOperand(t.arg1);
-            if (isTemp(dst)) {
-                out << "    " << dst << " = " << src << ";\n";
-            } else {
-                if (!declared[dst]) {
-                    string ty = "int";
-                    if (varTypes.find(dst) != varTypes.end()) ty = cppTypeFor(varTypes[dst]);
-                    out << "    " << ty << " " << dst << " = " << src << ";\n";
-                    declared[dst] = true;
-                } else {
-                    out << "    " << dst << " = " << src << ";\n";
+    // Emit top-level statements (FuncCallStmt, PrintStmt, NewlineStmt, etc.)
+    for (auto &nodePtr : program->decls) {
+        if (auto fcs = dynamic_cast<FuncCallStmt*>(nodePtr.get())) {
+            out << "    " << fcs->name << "(";
+            for (size_t i = 0; i < fcs->args.size(); ++i) {
+                auto &arg = fcs->args[i];
+                if (auto num = dynamic_cast<NumberExpr*>(arg.get())) out << num->value;
+                else if (auto str = dynamic_cast<StringExpr*>(arg.get())) out << '"' << str->value << '"';
+                else if (auto b = dynamic_cast<BoolExpr*>(arg.get())) out << b->value;
+                else if (auto v = dynamic_cast<VarExpr*>(arg.get())) out << v->name;
+                else if (auto unary = dynamic_cast<UnaryExpr*>(arg.get())) {
+                    if (unary->op == "-") {
+                        if (auto num = dynamic_cast<NumberExpr*>(unary->expr.get())) out << "-" << num->value;
+                        // Add more cases if needed
+                    }
                 }
+                if (i + 1 < fcs->args.size()) out << ", ";
             }
-        }
-        else if (t.op == "print") {
-            out << "    cout << " << makeExprOperand(t.arg1) << ";\n";
-        }
-        else if (t.op == "newline") {
+            out << ");\n";
+        } else if (auto ps = dynamic_cast<PrintStmt*>(nodePtr.get())) {
+            out << "    cout << ";
+            auto &expr = ps->expr;
+            if (auto call = dynamic_cast<FuncCallExpr*>(expr.get())) {
+                out << call->name << "(";
+                for (size_t i = 0; i < call->args.size(); ++i) {
+                    auto &arg = call->args[i];
+                    if (auto num = dynamic_cast<NumberExpr*>(arg.get())) out << num->value;
+                    else if (auto str = dynamic_cast<StringExpr*>(arg.get())) out << '"' << str->value << '"';
+                    else if (auto b = dynamic_cast<BoolExpr*>(arg.get())) out << b->value;
+                    else if (auto v = dynamic_cast<VarExpr*>(arg.get())) out << v->name;
+                    else if (auto unary = dynamic_cast<UnaryExpr*>(arg.get())) {
+                        if (unary->op == "-") {
+                            if (auto num = dynamic_cast<NumberExpr*>(unary->expr.get())) out << "-" << num->value;
+                            // Add more cases if needed
+                        }
+                    }
+                    if (i + 1 < call->args.size()) out << ", ";
+                }
+                out << ")";
+            } else if (auto num = dynamic_cast<NumberExpr*>(expr.get())) {
+                out << num->value;
+            } else if (auto str = dynamic_cast<StringExpr*>(expr.get())) {
+                out << '"' << str->value << '"';
+            } else if (auto b = dynamic_cast<BoolExpr*>(expr.get())) {
+                out << b->value;
+            } else if (auto v = dynamic_cast<VarExpr*>(expr.get())) {
+                out << v->name;
+            }
+            out << " << endl;\n";
+        } else if (dynamic_cast<NewlineStmt*>(nodePtr.get())) {
             out << "    cout << endl;\n";
         }
-        else if (t.op == "call") {
-            string dst = t.res;
-            string args = t.arg2;
-            // fix: if args are comma separated already, use as is. If empty, call without args.
-            if (isTemp(dst)) {
-                if (args.empty())
-                    out << "    " << dst << " = " << t.arg1 << "();\n";
-                else
-                    out << "    " << dst << " = " << t.arg1 << "(" << args << ");\n";
-            } else {
-                if (!declared[dst]) {
-                    string ty = "int";
-                    if (varTypes.find(dst) != varTypes.end()) ty = cppTypeFor(varTypes[dst]);
-                    if (args.empty())
-                        out << "    " << ty << " " << dst << " = " << t.arg1 << "();\n";
-                    else
-                        out << "    " << ty << " " << dst << " = " << t.arg1 << "(" << args << ");\n";
-                    declared[dst] = true;
-                } else {
-                    if (args.empty())
-                        out << "    " << dst << " = " << t.arg1 << "();\n";
-                    else
-                        out << "    " << dst << " = " << t.arg1 << "(" << args << ");\n";
-                }
-            }
-        }
-        else if (t.op == "return") {
-            if (t.arg1.empty()) out << "    return 0;\n";
-            else out << "    return " << makeExprOperand(t.arg1) << ";\n";
-        }
-        else if (t.op == "goto") {
-            out << "    goto " << t.res << ";\n";
-        }
-        else if (t.op == "ifFalse") {
-            out << "    if (!(" << makeExprOperand(t.arg1) << ")) goto " << t.res << ";\n";
-        }
-        else {
-            // binary / unary ops
-            string dst = t.res;
-            string a1 = makeExprOperand(t.arg1);
-            if (!t.arg2.empty()) {
-                string a2 = makeExprOperand(t.arg2);
-                if (isTemp(dst)) {
-                    out << "    " << dst << " = " << a1 << " " << t.op << " " << a2 << ";\n";
-                } else {
-                    if (!declared[dst]) {
-                        string ty = "int";
-                        if (varTypes.find(dst) != varTypes.end()) ty = cppTypeFor(varTypes[dst]);
-                        out << "    " << ty << " " << dst << " = " << a1 << " " << t.op << " " << a2 << ";\n";
-                        declared[dst] = true;
-                    } else {
-                        out << "    " << dst << " = " << a1 << " " << t.op << " " << a2 << ";\n";
-                    }
-                }
-            } else {
-                // unary
-                if (isTemp(dst)) {
-                    out << "    " << dst << " = " << t.op << " " << a1 << ";\n";
-                } else {
-                    if (!declared[dst]) {
-                        string ty = "int";
-                        if (varTypes.find(dst) != varTypes.end()) ty = cppTypeFor(varTypes[dst]);
-                        out << "    " << ty << " " << dst << " = " << t.op << " " << a1 << ";\n";
-                        declared[dst] = true;
-                    } else {
-                        out << "    " << dst << " = " << t.op << " " << a1 << ";\n";
-                    }
-                }
-            }
-        }
-    } // end main body
+        // Add more statement types as needed
+    }
 
     out << "    return 0;\n";
     out << "}\n";

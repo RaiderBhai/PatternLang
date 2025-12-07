@@ -1,0 +1,12 @@
+print max(10, 25);
+newline;
+print min(7, 3);
+newline;
+print abs(-42);
+newline;
+print pow(2, 5);
+newline;
+print sqrt(49);
+newline;
+print rangeSum(10);
+newline;

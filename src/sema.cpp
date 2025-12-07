@@ -23,6 +23,28 @@ void analyzeStmt(SemanticAnalyzer &sa, Stmt* s);
 void analyzeFuncDecl(SemanticAnalyzer &sa, FuncDecl* f);
 
 void SemanticAnalyzer::analyze(Program* program) {
+    // Register built-in pattern and math functions
+
+    std::vector<Symbol> builtins = {
+        Symbol("pyramid", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("diamond", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("box", true, {Type(TypeKind::TYPE_STRING), Type(TypeKind::TYPE_INT), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("stairs", true, {Type(TypeKind::TYPE_INT), Type(TypeKind::TYPE_STRING)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("line", true, {Type(TypeKind::TYPE_STRING), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("patternMultiply", true, {Type(TypeKind::TYPE_INT), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("max", true, {Type(TypeKind::TYPE_INT), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_INT)),
+        Symbol("min", true, {Type(TypeKind::TYPE_INT), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_INT)),
+        Symbol("abs", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_INT)),
+        Symbol("pow", true, {Type(TypeKind::TYPE_INT), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_INT)),
+        Symbol("sqrt", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_INT)),
+        Symbol("rangeSum", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_INT)),
+        Symbol("factor", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("isPrime", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_BOOL)),
+        Symbol("table", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
+        Symbol("repeat", true, {Type(TypeKind::TYPE_STRING), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_STRING))
+    };
+    for (auto &sym : builtins) symtab.insertGlobal(sym);
+
     // Phase 0: Collect function declarations (signatures) and global vars
     // First pass: register functions and global variables
     for (auto &nodePtr : program->decls) {
@@ -190,6 +212,24 @@ void analyzeStmt(SemanticAnalyzer &sa, Stmt* s) {
     // Print
     if (auto p = dynamic_cast<PrintStmt*>(s)) {
         analyzeExpr(sa, p->expr.get());
+        return;
+    }
+
+    // Function call as statement
+    if (auto fcs = dynamic_cast<FuncCallStmt*>(s)) {
+        Symbol* sym = sa.symtab.lookup(fcs->name);
+        if (!sym || !sym->isFunction) sa.error("Call to undeclared function '" + fcs->name + "'", 0);
+        if (sym->paramTypes.size() != fcs->args.size()) {
+            sa.error("Function '" + fcs->name + "' expects " + std::to_string(sym->paramTypes.size()) +
+                     " arguments but got " + std::to_string(fcs->args.size()), 0);
+        }
+        for (size_t i = 0; i < fcs->args.size() && i < sym->paramTypes.size(); ++i) {
+            Type at = analyzeExpr(sa, fcs->args[i].get());
+            if (at != sym->paramTypes[i]) {
+                sa.error("Type mismatch in argument " + std::to_string(i+1) + " of function '" + fcs->name +
+                         "': expected " + sym->paramTypes[i].toString() + " but got " + at.toString(), 0);
+            }
+        }
         return;
     }
     // Input

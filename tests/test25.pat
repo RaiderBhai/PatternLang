@@ -1,0 +1,18 @@
+box("*", 8, 4);
+newline;
+box("#", 5, 2);
+newline;
+stairs(6, "$");
+newline;
+stairs(3, "@");
+newline;
+patternMultiply(4, 7);
+newline;
+patternMultiply(2, 3);
+newline;
+print rangeSum(5);
+newline;
+print rangeSum(10);
+newline;
+print rangeSum(100);
+newline;

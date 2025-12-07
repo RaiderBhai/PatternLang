@@ -160,11 +160,26 @@ Stmt* Parser::statement() {
 
     if (check(TokenType::LBRACE)) return block();
 
+
     // assignment detection with safe lookahead
-    if (check(TokenType::ID) &&
-        current + 1 < tokens.size() &&
-        tokens[current + 1].type == TokenType::ASSIGN) {
-        return assignStmt();
+    if (check(TokenType::ID)) {
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::ASSIGN) {
+            return assignStmt();
+        }
+        // function call as statement: ID LPAREN ... RPAREN SEMICOLON
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::LPAREN) {
+            Token id = advance(); // consume ID
+            expect(TokenType::LPAREN, "Expected '('");
+            auto call = new FuncCallStmt(id.lexeme, id.line);
+            if (!check(TokenType::RPAREN)) {
+                do {
+                    call->args.emplace_back(expr());
+                } while (match(TokenType::COMMA));
+            }
+            expect(TokenType::RPAREN, "Expected ')'");
+            expect(TokenType::SEMICOLON, "Expected ';' after function call statement");
+            return call;
+        }
     }
 
     Token p = peek();

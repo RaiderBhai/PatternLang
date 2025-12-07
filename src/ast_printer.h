@@ -89,6 +89,14 @@ class ASTPrinter {
             return;
         }
 
+            if (auto fcs = dynamic_cast<FuncCallStmt*>(s)) {
+                tab(); std::cout << "FuncCallStmt(" << fcs->name << ")\n";
+                indent++;
+                for (auto &arg : fcs->args) printExpr(arg.get());
+                indent--;
+                return;
+            }
+
         if (auto i = dynamic_cast<InputStmt*>(s)) {
             tab(); std::cout << "Input(" << i->name << ")\n";
             return;
