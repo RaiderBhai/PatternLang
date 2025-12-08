@@ -1,0 +1,24 @@
+program     -> stmt_list
+
+stmt_list   -> stmt
+            | stmt stmt_list
+
+stmt        -> ID "=" expr ";"
+            | "print" expr ";"
+            | "for" ID "=" expr "to" expr block
+            | "if" "(" expr ")" block
+            | block
+
+block       -> "{" stmt_list "}"
+
+expr        -> expr "+" term
+            | expr "-" term
+            | term
+
+term        -> term "*" factor
+            | term "/" factor
+            | factor
+
+factor      -> NUMBER
+            | ID
+            | "(" expr ")"

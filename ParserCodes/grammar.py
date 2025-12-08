@@ -1,34 +1,14 @@
-grammar = """Program → StmtList
+grammar = """program → stmt_list
 
-StmtList → Stmt StmtList
-         | ε
+stmt_list → stmt
+          | stmt stmt_list
 
-Stmt → Decl ;
-     | Assign ;
-     | ForLoop
-     | PrintStmt ;
-     | NewlineStmt ;
+stmt → for_stmt
+     | call_stmt
+     
+for_stmt → "for" ID "=" NUMBER "to" NUMBER ";"
 
-Decl → let ID = Expr
-
-Assign → ID = Expr
-
-ForLoop → for ID = Expr to Expr { StmtList }
-
-PrintStmt → print Expr
-
-NewlineStmt → newline
-
-Expr → Term
-     | Term + Expr
-     | Term - Expr
-
-Term → Factor
-     | Factor * Term
-     | Factor / Term
-     | Factor % Term
-
-Factor → NUMBER
-       | ID
-       | ( Expr )
+call_stmt → ID "(" args? ")" ";"
+args → arg ("," arg)*
+arg → NUMBER | STRING
 """

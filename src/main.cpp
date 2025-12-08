@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     if (fout) {
         fout << cppSrc;
         fout.close();
-        std::cout << "Generated output.cpp — compile with: g++ output.cpp -o out && ./out\n";
+        std::cout << "Generated output.cpp - compile with: g++ output.cpp -o out && ./out\n";
     }
 
     ASTPrinter printer;

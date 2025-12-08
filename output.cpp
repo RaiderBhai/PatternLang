@@ -20,30 +20,19 @@ bool isPrime(int n) { if (n <= 1) return false; for (int i = 2; i * i <= n; ++i)
 void table(int n) { for (int i = 1; i <= n; ++i) { for (int j = 1; j <= n; ++j) cout << i * j << '	'; cout << endl; } }
 void patternMultiply(int a, int b) { for (int i = 0; i < a; ++i) { for (int j = 0; j < b; ++j) cout << '*'; cout << endl; } }
 
-int fact(int n);
-
-int fact(int n) {
-    int t3 = 0;
-    int t4 = 0;
-    int t2 = 0;
-    bool t1 = false;
-    t1 = n <= 1;
-    if (!(t1)) goto L2;
-    return 1;
-    goto L2;
-    L2:
-    t2 = n - 1;
-    t3 = fact(t2);
-    t4 = n * t3;
-    return t4;
-    return 0;
-    endfunc_fact:
-    return 0;
-}
 
 int main() {
-    int n = 0;
-    cout << fact(5) << endl;
+    cout << max(10, 25) << endl;
+    cout << endl;
+    cout << min(7, 3) << endl;
+    cout << endl;
+    cout << abs(-42) << endl;
+    cout << endl;
+    cout << pow(2, 5) << endl;
+    cout << endl;
+    cout << sqrt(49) << endl;
+    cout << endl;
+    cout << rangeSum(10) << endl;
     cout << endl;
     return 0;
 }
