@@ -3,36 +3,55 @@
 #include <cmath>
 using namespace std;
 
-string repeat(string c, int times) { string s; for (int i = 0; i < times; ++i) s += c; return s; }
-void pyramid(int height) { for (int i = 1; i <= height; ++i) { for (int j = 0; j < height - i; ++j) cout << ' '; for (int j = 0; j < 2 * i - 1; ++j) cout << '*'; cout << endl; } }
-void diamond(int height) { int n = height; for (int i = 1; i <= n; ++i) { for (int j = 0; j < n - i; ++j) cout << ' '; for (int j = 0; j < 2 * i - 1; ++j) cout << '*'; cout << endl; } for (int i = n - 1; i >= 1; --i) { for (int j = 0; j < n - i; ++j) cout << ' '; for (int j = 0; j < 2 * i - 1; ++j) cout << '*'; cout << endl; } }
-void line(string c, int width) { for (int i = 0; i < width; ++i) cout << c; cout << endl; }
-void box(string c, int width, int height) { for (int i = 0; i < height; ++i) { for (int j = 0; j < width; ++j) cout << c; cout << endl; } }
-void stairs(int height, string c) { for (int i = 1; i <= height; ++i) { for (int j = 0; j < i; ++j) cout << c; cout << endl; } }
-int max(int a, int b) { return a > b ? a : b; }
 int min(int a, int b) { return a < b ? a : b; }
-int abs(int x) { return x < 0 ? -x : x; }
-int pow(int a, int b) { return static_cast<int>(std::pow(a, b)); }
-int sqrt(int n) { return static_cast<int>(std::sqrt(n)); }
-int rangeSum(int n) { int s = 0; for (int i = 1; i <= n; ++i) s += i; return s; }
-void factor(int n) { for (int i = 2; i <= n; ++i) { while (n % i == 0) { cout << i << ' '; n /= i; } } cout << endl; }
-bool isPrime(int n) { if (n <= 1) return false; for (int i = 2; i * i <= n; ++i) if (n % i == 0) return false; return true; }
-void table(int n) { for (int i = 1; i <= n; ++i) { for (int j = 1; j <= n; ++j) cout << i * j << '	'; cout << endl; } }
-void patternMultiply(int a, int b) { for (int i = 0; i < a; ++i) { for (int j = 0; j < b; ++j) cout << '*'; cout << endl; } }
 
+int sq(int x);
+
+int sq(int x) {
+    int t1 = 0;
+    t1 = x * x;
+    return t1;
+    return 0;
+    endfunc_sq:
+    return 0;
+}
 
 int main() {
-    cout << max(10, 25) << endl;
+    int n = 0;
+    int x = 0;
+    bool t5 = false;
+    int t4 = 0;
+    int t6 = 0;
+    int t1 = 0;
+    int t3 = 0;
+    bool t2 = false;
+    func_sq:
+    n = 0;
+    cin >> n;
+    t2 = n > 5;
+    if (!(t2)) goto L1;
+    t3 = sq(n);
+    t1 = t3;
+    cout << "square: " << endl;
+    cout << t3 << endl;
     cout << endl;
-    cout << min(7, 3) << endl;
+    goto L2;
+    L1:
+    t4 = min(7, 3);
+    t1 = t4;
+    cout << "min of 7 and 3: " << endl;
+    cout << t4 << endl;
     cout << endl;
-    cout << abs(-42) << endl;
+    L2:
+    int i = 1;
+    L3:
+    t5 = i <= 5;
+    if (!(t5)) goto L4;
+    cout << i << endl;
     cout << endl;
-    cout << pow(2, 5) << endl;
-    cout << endl;
-    cout << sqrt(49) << endl;
-    cout << endl;
-    cout << rangeSum(10) << endl;
-    cout << endl;
+    t6 = i + 1;
+    i = t6;
+    goto L3;
+    L4:
     return 0;
 }

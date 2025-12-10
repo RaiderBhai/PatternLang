@@ -117,6 +117,20 @@ void IRGenerator::genStmt(Stmt* s) {
         TAC t; t.op = "print"; t.arg1 = v; emit(t);
         return;
     }
+    if (auto fcs = dynamic_cast<FuncCallStmt*>(s)) {
+        // generate argument expressions
+        std::string argList;
+        for (size_t i = 0; i < fcs->args.size(); ++i) {
+            std::string a = genExpr(fcs->args[i].get());
+            if (i == 0) argList = a; else argList += ", " + a;
+        }
+        TAC t; t.op = "call"; t.arg1 = fcs->name; t.arg2 = argList; t.res = ""; emit(t);
+        return;
+    }
+    if (auto ins = dynamic_cast<InputStmt*>(s)) {
+        TAC t; t.op = "input"; t.arg1 = ins->name; emit(t);
+        return;
+    }
     if (dynamic_cast<NewlineStmt*>(s)) {
         TAC t; t.op = "newline"; emit(t);
         return;

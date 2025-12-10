@@ -43,7 +43,10 @@ void SemanticAnalyzer::analyze(Program* program) {
         Symbol("table", true, {Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_VOID)),
         Symbol("repeat", true, {Type(TypeKind::TYPE_STRING), Type(TypeKind::TYPE_INT)}, Type(TypeKind::TYPE_STRING))
     };
-    for (auto &sym : builtins) symtab.insertGlobal(sym);
+    for (auto &sym : builtins) {
+        sym.isBuiltin = true;
+        symtab.insertGlobal(sym);
+    }
 
     // Phase 0: Collect function declarations (signatures) and global vars
     // First pass: register functions and global variables
@@ -254,20 +257,18 @@ void analyzeStmt(SemanticAnalyzer &sa, Stmt* s) {
 
     // ForStmt
     if (auto f = dynamic_cast<ForStmt*>(s)) {
-        // loop var must be declared before or treated as new?
-        // we'll allow loop variable as new local int
-        if (sa.symtab.existsInCurrent(f->var)) {
-            Symbol* vs = sa.symtab.lookup(f->var);
-            if (vs->type.kind != TypeKind::TYPE_INT) sa.error("Loop variable '" + f->var + "' must be int", 0);
-        } else {
-            Symbol vsym; vsym.name = f->var; vsym.type = Type(TypeKind::TYPE_INT); sa.symtab.insert(vsym);
-        }
+        // Evaluate bounds first
         Type st = analyzeExpr(sa, f->start.get());
         Type en = analyzeExpr(sa, f->end.get());
         if (st.kind != TypeKind::TYPE_INT || en.kind != TypeKind::TYPE_INT) sa.error("For loop bounds must be integers", 0);
 
+        // Create a new scope for the loop so the loop variable is local
         sa.symtab.pushScope();
+        Symbol vsym; vsym.name = f->var; vsym.type = Type(TypeKind::TYPE_INT);
+        if (!sa.symtab.insert(vsym)) sa.error("Loop variable '" + f->var + "' redeclared", 0);
+
         analyzeStmt(sa, f->block.get()); // block is a BlockStmt handled below
+        // Pop the scope - it will be saved automatically
         sa.symtab.popScope();
         return;
     }
@@ -286,9 +287,13 @@ void analyzeStmt(SemanticAnalyzer &sa, Stmt* s) {
     if (auto i = dynamic_cast<IfStmt*>(s)) {
         Type ct = analyzeExpr(sa, i->cond.get());
         if (ct.kind != TypeKind::TYPE_BOOL) sa.error("If condition must be boolean", 0);
+        
+        // Create scope for 'then' branch
         sa.symtab.pushScope();
         analyzeStmt(sa, i->then_block.get());
         sa.symtab.popScope();
+        
+        // Create separate scope for 'else' branch if it exists
         if (i->else_block) {
             sa.symtab.pushScope();
             analyzeStmt(sa, i->else_block.get());
@@ -299,9 +304,8 @@ void analyzeStmt(SemanticAnalyzer &sa, Stmt* s) {
 
     // BlockStmt
     if (auto b = dynamic_cast<BlockStmt*>(s)) {
-        sa.symtab.pushScope();
+        // Don't create a new scope here - the parent statement (if/for/while/function) already did
         for (auto &st : b->stmts) analyzeStmt(sa, st.get());
-        sa.symtab.popScope();
         return;
     }
 
@@ -315,18 +319,21 @@ void analyzeFuncDecl(SemanticAnalyzer &sa, FuncDecl* f) {
     sa.inFunction = true;
     sa.currentFunctionReturnType = Type(TypeKind::TYPE_UNKNOWN);
 
-    // create function scope and insert params
+    // Create a new scope for the function and add parameters
     sa.symtab.pushScope();
     for (auto &p : f->params) {
         Type pt = sa.stringToType(p.type);
-        Symbol s; s.name = p.name; s.type = pt;
-        if (!sa.symtab.insert(s)) sa.error("Parameter name '" + p.name + "' duplicated", 0);
+        Symbol s; 
+        s.name = p.name; 
+        s.type = pt;
+        if (!sa.symtab.insert(s)) {
+            sa.error("Parameter name '" + p.name + "' duplicated", 0);
+        }
     }
 
-    // scan function body for returns and statements
-    // We'll walk body statements; when we encounter a return with a value we set currentFunctionReturnType if unknown, else check match
-    std::function<void(Stmt*)> walkStmt;
-    walkStmt = [&](Stmt* s) {
+    // Scan function body for returns to infer return type
+    std::function<void(Stmt*)> scanForReturns;
+    scanForReturns = [&](Stmt* s) {
         if (!s) return;
         if (auto r = dynamic_cast<ReturnStmt*>(s)) {
             if (r->value) {
@@ -334,10 +341,10 @@ void analyzeFuncDecl(SemanticAnalyzer &sa, FuncDecl* f) {
                 if (sa.currentFunctionReturnType.kind == TypeKind::TYPE_UNKNOWN) {
                     sa.currentFunctionReturnType = rt;
                 } else {
-                    if (sa.currentFunctionReturnType != rt) sa.error("Inconsistent return types in function '" + f->name + "'", 0);
+                    if (sa.currentFunctionReturnType != rt) 
+                        sa.error("Inconsistent return types in function '" + f->name + "'", 0);
                 }
             } else {
-                // return without value -> void
                 if (sa.currentFunctionReturnType.kind == TypeKind::TYPE_UNKNOWN) {
                     sa.currentFunctionReturnType = Type(TypeKind::TYPE_VOID);
                 } else if (sa.currentFunctionReturnType.kind != TypeKind::TYPE_VOID) {
@@ -346,53 +353,32 @@ void analyzeFuncDecl(SemanticAnalyzer &sa, FuncDecl* f) {
             }
             return;
         }
-
-        // for nested statements, reuse analyzeStmt but be careful about recursion / scoping
         if (auto b = dynamic_cast<BlockStmt*>(s)) {
-            sa.symtab.pushScope();
-            for (auto &st : b->stmts) walkStmt(st.get());
-            sa.symtab.popScope();
+            for (auto &st : b->stmts) scanForReturns(st.get());
             return;
         }
         if (auto ifs = dynamic_cast<IfStmt*>(s)) {
-            analyzeExpr(sa, ifs->cond.get());
-            sa.symtab.pushScope();
-            walkStmt(ifs->then_block.get());
-            sa.symtab.popScope();
-            if (ifs->else_block) {
-                sa.symtab.pushScope();
-                walkStmt(ifs->else_block.get());
-                sa.symtab.popScope();
-            }
+            scanForReturns(ifs->then_block.get());
+            if (ifs->else_block) scanForReturns(ifs->else_block.get());
             return;
         }
         if (auto fs = dynamic_cast<ForStmt*>(s)) {
-            analyzeExpr(sa, fs->start.get());
-            analyzeExpr(sa, fs->end.get());
-            sa.symtab.pushScope();
-            walkStmt(fs->block.get());
-            sa.symtab.popScope();
+            scanForReturns(fs->block.get());
             return;
         }
         if (auto ws = dynamic_cast<WhileStmt*>(s)) {
-            analyzeExpr(sa, ws->cond.get());
-            sa.symtab.pushScope();
-            walkStmt(ws->block.get());
-            sa.symtab.popScope();
+            scanForReturns(ws->block.get());
             return;
         }
-
-        // general statements: assignments, prints, etc. Use the analyzer's analyzeStmt to handle them
-        analyzeStmt(sa, s);
     };
 
-    // Walk the body
+    // First scan to determine return type
     if (f->body) {
-        for (auto &s : f->body->stmts) walkStmt(s.get());
+        for (auto &s : f->body->stmts) scanForReturns(s.get());
     }
 
-    // save inferred return type into the function symbol
-    Symbol* fsym = sa.symtab.lookup(f->name); // Should find function symbol in outer scope
+    // Update function symbol with inferred return type
+    Symbol* fsym = sa.symtab.lookup(f->name);
     if (fsym && fsym->isFunction) {
         if (sa.currentFunctionReturnType.kind != TypeKind::TYPE_UNKNOWN) {
             fsym->returnType = sa.currentFunctionReturnType;
@@ -401,16 +387,13 @@ void analyzeFuncDecl(SemanticAnalyzer &sa, FuncDecl* f) {
         }
     }
 
-    // NOTE: keep function scope in the symbol table so it can be printed later.
-    // We intentionally DO NOT pop the function scope here so the function's parameters
-    // and any symbols declared at the function top-level remain visible for printing.
-    //
-    // If you prefer to keep only a snapshot rather than leaving scopes on the stack,
-    // we can implement a 'snapshot' API in SymbolTable and store the scope there
-    // (that requires a small change to symbol_table.h). For now leaving the scope
-    // makes it simple to inspect function-level symbols in the final symbol-table dump.
+    // Now analyze the function body with type checking
+    if (f->body) {
+        for (auto &s : f->body->stmts) analyzeStmt(sa, s.get());
+    }
 
-    // sa.symtab.popScope();  // <<-- intentionally removed so function scope remains
+    // Pop the function scope without capturing it (don't want function param scopes in output)
+    sa.symtab.popScope(false);
 
     sa.inFunction = false;
     sa.currentFunctionReturnType = Type(TypeKind::TYPE_VOID);

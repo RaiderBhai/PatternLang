@@ -36,6 +36,7 @@ struct Symbol {
     Type type;
 
     bool isFunction = false;
+    bool isBuiltin = false;
     std::vector<Type> paramTypes;
     Type returnType = Type(TypeKind::TYPE_UNKNOWN);
 
@@ -48,6 +49,9 @@ class SymbolTable {
 private:
     std::vector<std::unordered_map<std::string, Symbol>> scopes;
     int scopeCounter = 0;
+    // Store snapshots of scopes as they are created (for hierarchical printing)
+    std::vector<std::unordered_map<std::string, Symbol>> scopeSnapshots;
+    bool captureScopes = true; // Flag to control whether to capture scopes
 
 public:
     SymbolTable() { pushScope(); }
@@ -56,9 +60,14 @@ public:
         scopes.emplace_back();
     }
 
-    void popScope() {
-        if (!scopes.empty())
+    void popScope(bool capture = true) {
+        if (!scopes.empty()) {
+            // Save a snapshot before popping (only if capture is true)
+            if (capture) {
+                scopeSnapshots.push_back(scopes.back());
+            }
             scopes.pop_back();
+        }
     }
 
     bool insert(const Symbol &s) {
@@ -90,39 +99,91 @@ public:
         return true;
     }
 
-    // NEW: print entire symbol table
     void print() {
         std::cout << "\n=== SYMBOL TABLE ===\n";
 
-        int id = 0;
-        for (auto &scope : scopes) {
-            std::cout << "Scope " << id++ << ":\n";
-            std::cout << "  Name                Kind        Type        Params -> Return\n";
-            std::cout << "  ------------------------------------------------------------\n";
-
-            for (auto &p : scope) {
+        // Print Scope 0 (global) - exclude built-in functions
+        std::cout << "Scope 0:\n";
+        std::cout << "  Name                Kind        Type                Params -> Return\n";
+        std::cout << "  ------------------------------------------------------------------------\n";
+        
+        if (!scopes.empty()) {
+            for (auto &p : scopes[0]) {
                 const Symbol &sym = p.second;
+                // Skip built-in functions in the main scope output
+                if (sym.isBuiltin) continue;
 
                 std::cout << "  " << sym.name;
-
                 int pad = 20 - sym.name.size();
                 if (pad < 1) pad = 1;
                 std::cout << std::string(pad, ' ');
 
                 if (sym.isFunction) {
-                    std::cout << "function    -           (";
+                    std::cout << "function    " << sym.returnType.toString();
+                    
+                    // Pad the type column
+                    int typePad = 20 - sym.returnType.toString().size();
+                    if (typePad < 1) typePad = 1;
+                    std::cout << std::string(typePad, ' ');
+                    
+                    std::cout << "(";
                     for (size_t i = 0; i < sym.paramTypes.size(); i++) {
                         std::cout << sym.paramTypes[i].toString();
                         if (i + 1 < sym.paramTypes.size()) std::cout << ", ";
                     }
                     std::cout << ") -> " << sym.returnType.toString();
                 } else {
-                    std::cout << "variable     " << sym.type.toString();
+                    std::cout << "variable    " << sym.type.toString();
+                    int typePad = 20 - sym.type.toString().size();
+                    if (typePad < 1) typePad = 1;
+                    std::cout << std::string(typePad, ' ');
+                    std::cout << "-";
                 }
 
                 std::cout << "\n";
             }
+        }
+        std::cout << "\n";
 
+        // Print all captured scope snapshots as Scope 1, 2, 3, etc.
+        int scopeId = 1;
+        for (auto &scope : scopeSnapshots) {
+            // Skip empty scopes
+            if (scope.empty()) continue;
+            
+            std::cout << "Scope " << scopeId++ << ":\n";
+            std::cout << "  Name                Kind        Type                Params -> Return\n";
+            std::cout << "  ------------------------------------------------------------------------\n";
+            
+            for (auto &p : scope) {
+                const Symbol &sym = p.second;
+                
+                std::cout << "  " << sym.name;
+                int pad = 20 - sym.name.size();
+                if (pad < 1) pad = 1;
+                std::cout << std::string(pad, ' ');
+
+                if (sym.isFunction) {
+                    std::cout << "function    " << sym.returnType.toString();
+                    int typePad = 20 - sym.returnType.toString().size();
+                    if (typePad < 1) typePad = 1;
+                    std::cout << std::string(typePad, ' ');
+                    std::cout << "(";
+                    for (size_t i = 0; i < sym.paramTypes.size(); i++) {
+                        std::cout << sym.paramTypes[i].toString();
+                        if (i + 1 < sym.paramTypes.size()) std::cout << ", ";
+                    }
+                    std::cout << ") -> " << sym.returnType.toString();
+                } else {
+                    std::cout << "variable    " << sym.type.toString();
+                    int typePad = 20 - sym.type.toString().size();
+                    if (typePad < 1) typePad = 1;
+                    std::cout << std::string(typePad, ' ');
+                    std::cout << "-";
+                }
+
+                std::cout << "\n";
+            }
             std::cout << "\n";
         }
 
