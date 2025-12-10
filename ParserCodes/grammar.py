@@ -10,5 +10,6 @@ for_stmt → "for" ID "=" NUMBER "to" NUMBER ";"
 
 call_stmt → ID "(" args? ")" ";"
 args → arg ("," arg)*
-arg → NUMBER | STRING
+arg → NUMBER
+arg → STRING
 """
